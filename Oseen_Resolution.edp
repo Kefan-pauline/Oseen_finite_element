@@ -1,0 +1,64 @@
+// readmesh
+mesh Th = readmesh("cube_01_2D.mesh");
+plot(Th, wait=true);
+
+// priece-wise linear polynomial on the triangles
+fespace Vh(Th,P1);
+
+// approximated solution u p and test function w q
+Vh ux,uy,p,wx,wy,q;
+
+// boundary conditions 
+real uDx = 1;
+real uDy = 0;
+
+// constantes
+real rho = 1; // density 
+real ax = 1; // advection speed 
+real ay = 1;
+real miu = 1; // viscosity
+real h = 0.1; // minimal mesh size
+real alpha = 1/h;
+real tau = 1/( 2*rho*sqrt(ax*ax+ay*ay)/h + 12*miu/(h*h) );
+
+// useful operations
+macro div(ux,uy) (dx(ux) + dy(uy)) // def of div operator
+macro UgradV(ux,uy,vx,vy) [[ux,uy]'*[dx(vx),dy(vx)],[ux,uy]'*[dx(vy),dy(vy)]] // def of u dot grad(V)
+macro epsilon(ux,uy) [dx(ux),(dy(ux)+dx(uy))/2,(dx(uy)+dy(ux))/2,dy(uy)] // def of epsilon
+macro sigmaN(ux,uy,p) (-p*[[1,0],[0,1]]+ 2*miu*[[dx(ux),(dy(ux)+dx(uy))/2],[(dx(uy)+dy(ux))/2,dy(uy)]]) * [N.x,N.y] 
+						
+// weak formulation
+solve Oseen([ux,uy,p],[wx,wy,q],solver=LU) =
+      // aG
+	  int2d(Th)(rho*UgradV(ax,ay,ux,uy)'*[wx,wy]) - int2d(Th)(div(wx,wy)*p) + int2d(Th)(2*miu*epsilon(wx,wy)'*epsilon(ux,uy))  + int2d(Th)(q*div(ux,uy)) - int1d(Th,1)([wx,wy]'*sigmaN(ux,uy,p))
+	
+	  // aN 
+	  + int1d(Th,1)([ux,uy]'*sigmaN(wx,wy,q)) + int1d(Th,1)(alpha*wx*ux+alpha*wy*uy)
+	  
+	  // lN
+	  - int1d(Th,1)([uDx,uDy]'*sigmaN(wx,wy,q)) - int1d(Th,1)(alpha*wx*uDx+alpha*wy*uDy)
+	  
+	  // PSPG
+	  + int2d(Th)(([dx(q),dy(q)]'*(rho*UgradV(ax,ay,ux,uy)+[dx(p),dy(p)]))*tau)
+	  
+	  // SUPG
+	  + int2d(Th)((rho*UgradV(ax,ay,wx,wy)'*(rho*UgradV(ax,ay,ux,uy)+[dx(p),dy(p)]))*tau)
+	  
+	  // Boundary condition
+	  + on(3,ux=0,uy=0)
+	  
+	  ;
+	
+// plot
+// 'Enter' pour afficher le graphe suivant, 'p' pour revenir en arriere
+plot(ux, fill=true, wait=true, value=true);  
+plot(uy, fill=true, wait=true, value=true);
+plot(p, fill=true, wait=true, value=true);
+plot([ux, uy], p, value=true);
+
+
+
+
+
+
+
