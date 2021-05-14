@@ -1,6 +1,9 @@
 // readmesh
 mesh Th = readmesh("cube_01_2D.mesh");
 plot(Th, wait=true);
+// Physical group 1 : condition de Dirichlet
+// Physical group 2 : condition de Neumann
+// Physical group 3 : bord de l'obstacle 
 
 // priece-wise linear polynomial on the triangles
 fespace Vh(Th,P1);
@@ -29,7 +32,7 @@ macro sigmaN(ux,uy,p) (-p*[[1,0],[0,1]]+ 2*miu*[[dx(ux),(dy(ux)+dx(uy))/2],[(dx(
 						
 // weak formulation
 solve Oseen([ux,uy,p],[wx,wy,q],solver=LU) =
-      // aG
+          // aG
 	  int2d(Th)(rho*UgradV(ax,ay,ux,uy)'*[wx,wy]) - int2d(Th)(div(wx,wy)*p) + int2d(Th)(2*miu*epsilon(wx,wy)'*epsilon(ux,uy))  + int2d(Th)(q*div(ux,uy)) - int1d(Th,1)([wx,wy]'*sigmaN(ux,uy,p))
 	
 	  // aN 
